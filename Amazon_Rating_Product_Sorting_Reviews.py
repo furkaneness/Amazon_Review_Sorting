@@ -24,12 +24,27 @@ df["overall"].mean()  # Urunun ortalama puani
 df.info()
 df["reviewTime"] = pd.to_datetime(df["reviewTime"])
 
-df["day_diff"].quantile([.1, .25, .60])
+a = df["day_diff"].quantile(0.25)
+b = df["day_diff"].quantile(0.50)
+c = df["day_diff"].quantile(0.75)
 
-df.loc[df["day_diff"] < 167, "overall"].mean() * 35/100 +\
-df.loc[(df["day_diff"] > 167) & (df["day_diff"] < 281), "overall"].mean() * 30/100 +\
-df.loc[(df["day_diff"] > 281) & (df["day_diff"] < 497), "overall"].mean() * 20/100 +\
-df.loc[df["day_diff"] > 497, "overall"].mean() * 15/100
+df["overall"].mean()
+
+
+df.loc[df["day_diff"] <= a, "overall"].mean()
+df.loc[(df["day_diff"] > a) & (df["day_diff"] <= b), "overall"].mean()
+df.loc[(df["day_diff"] > b) & (df["day_diff"] <= c), "overall"].mean()
+df.loc[(df["day_diff"] > c), "overall"].mean()
+
+
+def time_based_weighted_average(dataframe, w1=28, w2=26, w3=24, w4=22):
+    return dataframe.loc[df["day_diff"] <= a, "overall"].mean() * w1 / 100 + \
+           dataframe.loc[(dataframe["day_diff"] > a) & (dataframe["day_diff"] <= b), "overall"].mean() * w2 / 100 + \
+           dataframe.loc[(dataframe["day_diff"] > b) & (dataframe["day_diff"] <= c), "overall"].mean() * w3 / 100 + \
+           dataframe.loc[(dataframe["day_diff"] > c), "overall"].mean() * w4 / 100
+
+
+time_based_weighted_average(df)
 
 
 #####################################
