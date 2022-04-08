@@ -106,4 +106,70 @@ df["wilson_lower_bound"] = df.apply(lambda x: wilson_lower_bound(x["helpful_yes"
 df.sort_values(by="wilson_lower_bound", ascending=False).head(20)
 
 
+#########################################
+# Sentiment Analizi (Duygu Analizi)
+#########################################
 
+# Yapılan yorumları positive, notr ve negatif olarak sınıflandırmak istiyoruz.
+# Bunun için yorumlara duygu analizi yapacağız. Natural Language Toolkit kütüphanesi kullanacağız.
+
+# NLTK -> Doğal dil işleme kütüphanesi (https://www.nltk.org/)
+# Sentiment analysis (Duygu analizi), metindeki olumlu veya olumsuz duyguyu tespit etme sürecidir.
+# Genellikle şirketler veya markalar tarafından sosyal verilerdeki duyarlılığı tespit etmek, marka itibarını ölçmek
+# ve müşterileri anlamak için kullanılır.
+
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+import nltk
+import re
+from textblob import TextBlob
+nltk.downloader.download("vader_lexicon")
+
+# Daha iyi sonuçlar alabilmek adına, summary değişkenimizin içerisindeki textlerin temizlenmesi gerekiyor
+# (Noktalama işaretlerinden kurtulmak, küçük harfe çevirmek...)
+rt = lambda x: re.sub("(@[A-Za-z0-9]+)|([^0-9A-Za-z \t])|(\w+:\/\/\S+)"," ",x)
+df["summary"] = df["summary"].map(rt)
+df["summary"] = df["summary"].str.lower()
+df.head(10)
+
+# Sentiment Analizi
+# TextBlob çıktı olarak; polarity ve subjectivity değerlerini döndürecektir.
+# Polarity; duygu durumunu yani olumlu mu olumsuz mu olduğunu belirtir.
+# Bize 0 ile 1 arasında değer döndürür, 1'e ne kadar yakınsa o kadar olumlu, 0'a ne kadar yakınsa o kadar olumsuzdur.
+
+df[["polarity", "subjectivity"]] = df["summary"].apply(lambda text: pd.Series(TextBlob(text).sentiment))
+
+for index, row in df['summary'].iteritems():
+     score = SentimentIntensityAnalyzer().polarity_scores(row)
+     neg = score['neg']
+     neu = score['neu']
+     pos = score['pos']
+     if neg > pos:
+         df.loc[index, 'sentiment'] = "negative"
+     elif pos > neg:
+         df.loc[index, 'sentiment'] = "positive"
+     else:
+         df.loc[index, 'sentiment'] = "neutral"
+     df.loc[index, 'neg'] = neg
+     df.loc[index, 'neu'] = neu
+     df.loc[index, 'pos'] = pos
+
+
+df["sentiment"].value_counts()
+
+from wordcloud import WordCloud, STOPWORDS
+import matplotlib.pyplot as plt
+def create_wordcloud(text):
+    stopwords = set(STOPWORDS)
+    wc = WordCloud(background_color="white",
+                  max_words=3000,
+                  stopwords=stopwords,
+                  repeat=True)
+    wc.generate(str(text))
+    plt.figure()
+    plt.imshow(wc, interpolation="bilinear")
+    plt.axis("off")
+    plt.show()
+
+create_wordcloud(df[df["sentiment"]=="positive"]["summary"].values)
+
+create_wordcloud(df[df["sentiment"]=="negative"]["summary"].values)
